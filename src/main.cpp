@@ -1,9 +1,10 @@
+
 #include <igl/readOFF.h>
 #include <igl/readOBJ.h>
 
 #include <igl/opengl/glfw/Viewer.h>
-#include <igl/opengl/glfw/imgui/ImGuiMenu.h>
-#include <igl/opengl/glfw/imgui/ImGuiHelpers.h>
+//#include <igl/opengl/glfw/imgui/ImGuiMenu.h>
+//#include <igl/opengl/glfw/imgui/ImGuiHelpers.h>
 #include <igl/per_vertex_normals.h>
 #include <igl/per_face_normals.h>
 #include <igl/triangle_triangle_adjacency.h>
@@ -26,6 +27,7 @@
 using namespace std;
 
 #define epsilon 10e-6
+#define M_PI 3.1415926
 
 // Vertex array, #V x3
 Eigen::MatrixXd V;
@@ -86,9 +88,9 @@ void compute_triangle_regularity(
     Eigen::MatrixXd& k_vec,
     unordered_set<int>& regular,
     unordered_set<int>& singular
-    )
+)
 {
-    int s[] = {1, -1};
+    int s[] = { 1, -1 };
     for (int f = 0; f < F.rows(); f++) {
         bool is_regular = false;
 
@@ -124,7 +126,7 @@ double vertex_extremality(int p, Eigen::VectorXd& k, Eigen::MatrixXd& k_vec, Eig
         if (regular.find(star[t]) == regular.end()) continue;
 
         area_sum += A(star[t]);
-        e += A(star[t])*G_k.row(star[t]).dot(k_vec.row(p));
+        e += A(star[t]) * G_k.row(star[t]).dot(k_vec.row(p));
     }
 
     if (area_sum != 0)
@@ -169,15 +171,15 @@ float cotan_weight(int p, int q) {
     Eigen::Vector3d v3 = V.row(p1).transpose();
     Eigen::Vector3d v4 = V.row(p2).transpose();
 
-    double cotan1 = ((v1-v3).dot((v2-v3))) / ((v1-v3).cross((v2-v3))).norm();
-    double cotan2 = ((v1-v4).dot((v2-v4))) / ((v1-v4).cross((v2-v4))).norm();
+    double cotan1 = ((v1 - v3).dot((v2 - v3))) / ((v1 - v3).cross((v2 - v3))).norm();
+    double cotan2 = ((v1 - v4).dot((v2 - v4))) / ((v1 - v4).cross((v2 - v4))).norm();
 
     return (cotan1 + cotan2) / 2;
 }
 
 // Function that computes the shape operator for each vertex
 void compute_extremality
-    (
+(
     Eigen::MatrixXd& V,
     Eigen::MatrixXi& F,
     Eigen::MatrixXi& TT,
@@ -189,9 +191,9 @@ void compute_extremality
     Eigen::MatrixXd& k_vec_min,
     Eigen::VectorXd& e_max,    // Extremality corresponding to e_max
     Eigen::VectorXd& e_min    // Extremality corresponding to e_min
-    )
+)
 {
-    Eigen::MatrixXd N_edges(F.rows()*3, 3);
+    Eigen::MatrixXd N_edges(F.rows() * 3, 3);
     vector<Eigen::Matrix3d> operator_edges;     // Shape operator for edges
     vector<Eigen::Matrix3d> operator_vertices;  // Shape operator for vertices
     unordered_map<int, vector<int> > vtoe;  // A map mapping a vertex to all the incident edges
@@ -201,7 +203,7 @@ void compute_extremality
     for (int f = 0; f < F.rows(); f++) {
         for (int ei = 0; ei < F.cols(); ei++) {
             // Look up the opposite face
-            int g = TT(f,ei);
+            int g = TT(f, ei);
             // Boundary edge
             if (g == -1) continue;
 
@@ -216,7 +218,7 @@ void compute_extremality
             }
 
             /*** Start computing the shape operator for the edge ***/
-            Eigen::RowVector3d eg = V.row(F(f, (ei+1)%3)) - V.row(F(f, ei));
+            Eigen::RowVector3d eg = V.row(F(f, (ei + 1) % 3)) - V.row(F(f, ei));
             double cos_value = N_faces.row(f).dot(N_faces.row(g)) / (N_faces.row(f).norm() * N_faces.row(g).norm());
             if (cos_value < -1) cos_value = -1;
             else if (cos_value > 1) cos_value = 1;
@@ -267,13 +269,13 @@ void compute_extremality
 
         for (int i = 0; i < 3; i++) {
             if (abs(eVals(i)) == minVal) {
-                if (eVals((i+1)%3) >= eVals((i+2)%3)) {
-                    max_id = (i+1)%3;
-                    min_id = (i+2)%3;
+                if (eVals((i + 1) % 3) >= eVals((i + 2) % 3)) {
+                    max_id = (i + 1) % 3;
+                    min_id = (i + 2) % 3;
                 }
                 else {
-                    max_id = (i+2)%3;
-                    min_id = (i+1)%3;
+                    max_id = (i + 2) % 3;
+                    min_id = (i + 1) % 3;
                 }
 
                 break;
@@ -295,8 +297,8 @@ void compute_extremality
             area_sum += abs(A(star[t]));
         }
 
-        k_max(p) = 3.0/area_sum * k_max(p);
-        k_min(p) = 3.0/area_sum * k_min(p);
+        k_max(p) = 3.0 / area_sum * k_max(p);
+        k_min(p) = 3.0 / area_sum * k_min(p);
     }
 
     // Or use libigl to compute the principal function
@@ -308,8 +310,8 @@ void compute_extremality
     compute_triangle_regularity(F, k_vec_min, regular_min, singular_min);
 
     // Compute gradient of k_max and k_min
-    Eigen::MatrixXd G_k_max = Eigen::Map<const Eigen::MatrixXd>((G*k_max).eval().data(),F.rows(),3);
-    Eigen::MatrixXd G_k_min = Eigen::Map<const Eigen::MatrixXd>((G*k_min).eval().data(),F.rows(),3);
+    Eigen::MatrixXd G_k_max = Eigen::Map<const Eigen::MatrixXd>((G * k_max).eval().data(), F.rows(), 3);
+    Eigen::MatrixXd G_k_min = Eigen::Map<const Eigen::MatrixXd>((G * k_min).eval().data(), F.rows(), 3);
 
     e_max.resize(V.rows());
     e_min.resize(V.rows());
@@ -321,7 +323,7 @@ void compute_extremality
 
 // Detect the feature lines in the triangle
 void feature_lines
-    (
+(
     Eigen::MatrixXd& V,
     Eigen::MatrixXi& F,
     Eigen::VectorXd& k_max,
@@ -330,7 +332,7 @@ void feature_lines
     Eigen::MatrixXd& k_vec_min,
     Eigen::VectorXd& e_max,    // Extremality corresponding to e_max
     Eigen::VectorXd& e_min    // Extremality corresponding to e_min
-    )
+)
 {
     edges_max = vector<Eigen::MatrixXd>();
     edges_min = vector<Eigen::MatrixXd>();
@@ -368,8 +370,14 @@ void feature_lines
 
         // Compute grad of e on the triangle
         Eigen::SparseMatrix<double> G_T;
-        igl::grad(V_T, F_T, G_T);
-        Eigen::RowVector3d G_e_max_T = Eigen::Map<const Eigen::MatrixXd>((G_T*e_max_T).eval().data(),1,3);
+        Eigen::MatrixXi F_TM(1, 3);
+        for (size_t i = 0; i < 3; i++)
+        {
+            F_TM(0,i) = i;
+        }
+
+        igl::grad(V_T, F_TM, G_T);
+        Eigen::RowVector3d G_e_max_T = Eigen::Map<const Eigen::MatrixXd>((G_T * e_max_T).eval().data(), 1, 3);
 
         // Compute the conditions needed first
         Eigen::RowVector3d k_vec_max_sum(0, 0, 0);
@@ -391,10 +399,10 @@ void feature_lines
         for (int ei = 0; ei < F.cols(); ei++) {
             double e1_max = abs(e_max(F(f, ei))) < epsilon ? 0 : e_max(F(f, ei));
             if (k_vec_max.row(F(f, ei)).dot(k_vec_max.row(F(f, 0))) < 0) e1_max *= -1;
-            double e2_max = abs(e_max(F(f, (ei+1)%3))) < epsilon ? 0 : e_max(F(f, (ei+1)%3));
-            if (k_vec_max.row(F(f, (ei+1)%3)).dot(k_vec_max.row(F(f, 0))) < 0) e2_max *= -1;
-            double e3_max = abs(e_max(F(f, (ei+2)%3))) < epsilon ? 0 : e_max(F(f, (ei+2)%3));
-            if (k_vec_max.row(F(f, (ei+2)%3)).dot(k_vec_max.row(F(f, 0))) < 0) e3_max *= -1;
+            double e2_max = abs(e_max(F(f, (ei + 1) % 3))) < epsilon ? 0 : e_max(F(f, (ei + 1) % 3));
+            if (k_vec_max.row(F(f, (ei + 1) % 3)).dot(k_vec_max.row(F(f, 0))) < 0) e2_max *= -1;
+            double e3_max = abs(e_max(F(f, (ei + 2) % 3))) < epsilon ? 0 : e_max(F(f, (ei + 2) % 3));
+            if (k_vec_max.row(F(f, (ei + 2) % 3)).dot(k_vec_max.row(F(f, 0))) < 0) e3_max *= -1;
 
             // If all the e_max are identically zero
             if (e1_max == 0 && e2_max == 0 && e3_max == 0)
@@ -406,7 +414,7 @@ void feature_lines
 
             // The zero set range [p1, p2), excluding p2
             Eigen::RowVector3d p1 = V.row(F(f, ei));
-            Eigen::RowVector3d p2 = V.row(F(f, (ei+1)%3));
+            Eigen::RowVector3d p2 = V.row(F(f, (ei + 1) % 3));
 
             if (e1_max == 0) {
                 zero_set.push_back(p1);
@@ -440,6 +448,9 @@ void feature_lines
         Eigen::Vector3d e_min_T;
 
         Eigen::RowVector3i F_T(0, 1, 2);
+
+        
+
         Eigen::MatrixXd V_T(3, 3);
 
         for (int i = 0; i < 3; i++) {
@@ -459,8 +470,13 @@ void feature_lines
 
         // Compute grad of e on the triangle
         Eigen::SparseMatrix<double> G_T;
-        igl::grad(V_T, F_T, G_T);
-        Eigen::RowVector3d G_e_min_T = Eigen::Map<const Eigen::MatrixXd>((G_T*e_min_T).eval().data(),1,3);
+        Eigen::MatrixXi F_TM(1, 3);
+        for (size_t i = 0; i < 3; i++)
+        {
+            F_TM(0, i) = i;
+        }
+        igl::grad(V_T, F_TM, G_T);
+        Eigen::RowVector3d G_e_min_T = Eigen::Map<const Eigen::MatrixXd>((G_T * e_min_T).eval().data(), 1, 3);
 
         // Compute the conditions needed first
         Eigen::RowVector3d k_vec_min_sum = Eigen::MatrixXd::Constant(1, 3, 0);
@@ -482,10 +498,10 @@ void feature_lines
         for (int ei = 0; ei < F.cols(); ei++) {
             double e1_min = abs(e_min(F(f, ei))) < epsilon ? 0 : e_min(F(f, ei));
             if (k_vec_min.row(F(f, ei)).dot(k_vec_min.row(F(f, 0))) < 0) e1_min *= -1;
-            double e2_min = abs(e_min(F(f, (ei+1)%3))) < epsilon ? 0 : e_min(F(f, (ei+1)%3));
-            if (k_vec_min.row(F(f, (ei+1)%3)).dot(k_vec_min.row(F(f, 0))) < 0) e2_min *= -1;
-            double e3_min = abs(e_min(F(f, (ei+2)%3))) < epsilon ? 0 : e_min(F(f, (ei+2)%3));
-            if (k_vec_min.row(F(f, (ei+2)%3)).dot(k_vec_min.row(F(f, 0))) < 0) e3_min *= -1;
+            double e2_min = abs(e_min(F(f, (ei + 1) % 3))) < epsilon ? 0 : e_min(F(f, (ei + 1) % 3));
+            if (k_vec_min.row(F(f, (ei + 1) % 3)).dot(k_vec_min.row(F(f, 0))) < 0) e2_min *= -1;
+            double e3_min = abs(e_min(F(f, (ei + 2) % 3))) < epsilon ? 0 : e_min(F(f, (ei + 2) % 3));
+            if (k_vec_min.row(F(f, (ei + 2) % 3)).dot(k_vec_min.row(F(f, 0))) < 0) e3_min *= -1;
 
             // If all the e_min are identically zero
             if (e1_min == 0 && e2_min == 0 && e3_min == 0)
@@ -497,7 +513,7 @@ void feature_lines
 
             // The zero set range [p1, p2), excluding p2
             Eigen::RowVector3d p1 = V.row(F(f, ei));
-            Eigen::RowVector3d p2 = V.row(F(f, (ei+1)%3));
+            Eigen::RowVector3d p2 = V.row(F(f, (ei + 1) % 3));
 
             if (e1_min == 0) {
                 zero_set.push_back(p1);
@@ -531,7 +547,7 @@ void feature_lines
         vector<Eigen::RowVector3d> zero_set;
         for (int ei = 0; ei < F.cols(); ei++) {
             // Look up the opposite face
-            int g = TT(f,ei);
+            int g = TT(f, ei);
             // If it is a boundary edge
             if (g == -1) continue;
             // If the opposite face is singular skip it
@@ -540,8 +556,8 @@ void feature_lines
             if (!faces_marked_max[g]) continue;
 
             double e1_max = abs(e_max(F(f, ei))) < epsilon ? 0 : e_max(F(f, ei));
-            double e2_max = abs(e_max(F(f, (ei+1)%3))) < epsilon ? 0 : e_max(F(f, (ei+1)%3));
-            double e3_max = abs(e_max(F(f, (ei+2)%3))) < epsilon ? 0 : e_max(F(f, (ei+2)%3));
+            double e2_max = abs(e_max(F(f, (ei + 1) % 3))) < epsilon ? 0 : e_max(F(f, (ei + 1) % 3));
+            double e3_max = abs(e_max(F(f, (ei + 2) % 3))) < epsilon ? 0 : e_max(F(f, (ei + 2) % 3));
 
             // If there is no zero level set on the edge
             if ((e1_max > 0 && e2_max > 0) || (e1_max < 0 && e2_max < 0))
@@ -549,7 +565,7 @@ void feature_lines
 
             // The zero set range (p1, p2], excluding p1
             Eigen::RowVector3d p1 = V.row(F(f, ei));
-            Eigen::RowVector3d p2 = V.row(F(f, (ei+1)%3));
+            Eigen::RowVector3d p2 = V.row(F(f, (ei + 1) % 3));
 
             if (e2_max == 0) {
                 zero_set.push_back(p2);
@@ -588,7 +604,7 @@ void feature_lines
         vector<Eigen::RowVector3d> zero_set;
         for (int ei = 0; ei < F.cols(); ei++) {
             // Look up the opposite face
-            int g = TT(f,ei);
+            int g = TT(f, ei);
             // If it is a boundary edge
             if (g == -1) continue;
             // If the opposite face is singular skip it
@@ -597,8 +613,8 @@ void feature_lines
             if (!faces_marked_min[g]) continue;
 
             double e1_min = abs(e_min(F(f, ei))) < epsilon ? 0 : e_min(F(f, ei));
-            double e2_min = abs(e_min(F(f, (ei+1)%3))) < epsilon ? 0 : e_min(F(f, (ei+1)%3));
-            double e3_min = abs(e_min(F(f, (ei+2)%3))) < epsilon ? 0 : e_min(F(f, (ei+2)%3));
+            double e2_min = abs(e_min(F(f, (ei + 1) % 3))) < epsilon ? 0 : e_min(F(f, (ei + 1) % 3));
+            double e3_min = abs(e_min(F(f, (ei + 2) % 3))) < epsilon ? 0 : e_min(F(f, (ei + 2) % 3));
 
             // If there is no zero level set on the edge
             if ((e1_min > 0 && e2_min > 0) || (e1_min < 0 && e2_min < 0))
@@ -606,7 +622,7 @@ void feature_lines
 
             // The zero set range (p1, p2], excluding p1
             Eigen::RowVector3d p1 = V.row(F(f, ei));
-            Eigen::RowVector3d p2 = V.row(F(f, (ei+1)%3));
+            Eigen::RowVector3d p2 = V.row(F(f, (ei + 1) % 3));
 
             if (e2_min == 0) {
                 zero_set.push_back(p2);
@@ -644,7 +660,7 @@ void smooth_feature_line(
     Eigen::MatrixXd& k_vec_min,
     Eigen::VectorXd& e_max,
     Eigen::VectorXd& e_min
-    )
+)
 {
     double lambda = 0.1;
     Eigen::VectorXd delta_max = Eigen::MatrixXd::Constant(V.rows(), 1, 0);
@@ -659,8 +675,8 @@ void smooth_feature_line(
             int sigma_max = k_vec_max.row(p).dot(k_vec_max.row(link[q])) < 0 ? -1 : 1;
             int sigma_min = k_vec_min.row(p).dot(k_vec_min.row(link[q])) < 0 ? -1 : 1;
 
-            delta_max(p) += weight * (sigma_max*e_max(link[q]) - e_max(p));
-            delta_min(p) += weight * (sigma_max*e_min(link[q]) - e_min(p));
+            delta_max(p) += weight * (sigma_max * e_max(link[q]) - e_max(p));
+            delta_min(p) += weight * (sigma_max * e_min(link[q]) - e_min(p));
         }
     }
 
@@ -675,19 +691,19 @@ void plot_feature_lines(igl::opengl::glfw::Viewer& viewer, vector<Eigen::MatrixX
     viewer.data().set_mesh(V, F);
 
     for (int i = 0; i < edges_max.size(); i++) {
-        viewer.data().add_edges(edges_max[i].row(0), edges_max[i].row(1), Eigen::RowVector3d(1,0,0));
+        viewer.data().add_edges(edges_max[i].row(0), edges_max[i].row(1), Eigen::RowVector3d(1, 0, 0));//red
     }
     for (int i = 0; i < edges_min.size(); i++) {
-        viewer.data().add_edges(edges_min[i].row(0), edges_min[i].row(1), Eigen::RowVector3d(0,0,1));
+        viewer.data().add_edges(edges_min[i].row(0), edges_min[i].row(1), Eigen::RowVector3d(0, 0, 1));//blue
     }
 
     Eigen::MatrixXd C(F.rows(), 3);
     for (int i = 0; i < F.rows(); i++) {
         if (regular_max.find(i) == regular_max.end()) {
-            C.row(i) << 0, 0, 0;
+            C.row(i) << 0, 0, 0;//black
         }
         else
-            C.row(i) << 1, 1, 1;
+            C.row(i) << 1, 1, 1;//white
     }
 
     viewer.data().set_colors(C);
@@ -723,37 +739,37 @@ int main(int argc, char* argv[]) {
     using namespace std;
     using namespace Eigen;
 
-    if (argc != 2) {
-        cout << "Usage final_project_bin mesh.off" << endl;
-        exit(0);
-    }
+    //if (argc != 2) {
+    //    cout << "Usage final_project_bin mesh.off" << endl;
+    //    exit(0);
+    //}
 
     // Load a mesh in OFF format
-    igl::readOFF(argv[1], V, F);
-
+    //igl::readOFF(argv[1], V, F);
+    igl::readOFF(TUTORIAL_SHARED_PATH "/uppertooth2.off", V, F);
     // Compute per-face normals
-    igl::per_face_normals(V,F,N_faces);
+    igl::per_face_normals(V, F, N_faces);
 
     // Compute per-vertex normals
-    igl::per_vertex_normals(V,F,N_vertices);
+    igl::per_vertex_normals(V, F, N_vertices);
 
     // Triangle-triangle adjacency
-    igl::triangle_triangle_adjacency(F,TT,TTi);
+    igl::triangle_triangle_adjacency(F, TT, TTi);
 
     // Vertex-triangle adjacency
-    igl::vertex_triangle_adjacency(V,F,VT,VTi);
+    igl::vertex_triangle_adjacency(V, F, VT, VTi);
 
     // Compute area for each triangle
-    igl::doublearea(V,F,A);
+    igl::doublearea(V, F, A);
 
     // Compute the bary center for each triangle
-    igl::barycenter(V,F,B);
+    igl::barycenter(V, F, B);
 
     // Compute the aadjacency list for each vertex
-    igl::adjacency_list(F,VV);
+    igl::adjacency_list(F, VV);
 
     // Compute gradient operator
-    igl::grad(V,F,G);
+    igl::grad(V, F, G);
 
     // Interpolate the field and plot
     key_down(viewer, '1', 0);
@@ -762,7 +778,7 @@ int main(int argc, char* argv[]) {
     viewer.callback_key_down = &key_down;
 
     // Disable wireframe
-    viewer.data().show_lines = false;
+    viewer.data().show_lines = true;
 
     // Launch the viewer
     viewer.launch();
