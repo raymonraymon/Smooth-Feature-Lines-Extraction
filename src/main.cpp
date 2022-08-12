@@ -739,14 +739,14 @@ int main(int argc, char* argv[]) {
     using namespace std;
     using namespace Eigen;
 
-    //if (argc != 2) {
-    //    cout << "Usage final_project_bin mesh.off" << endl;
-    //    exit(0);
-    //}
+    if (argc != 2) {
+        cout << "Usage final_project_bin mesh.off" << endl;
+        exit(0);
+    }
 
     // Load a mesh in OFF format
-    //igl::readOFF(argv[1], V, F);
-    igl::readOFF(TUTORIAL_SHARED_PATH "/uppertooth2.off", V, F);
+    igl::readOFF(argv[1], V, F);
+    
     // Compute per-face normals
     igl::per_face_normals(V, F, N_faces);
 
@@ -778,7 +778,7 @@ int main(int argc, char* argv[]) {
     viewer.callback_key_down = &key_down;
 
     // Disable wireframe
-    viewer.data().show_lines = true;
+    viewer.data().show_lines = false;
 
     // Launch the viewer
     viewer.launch();
